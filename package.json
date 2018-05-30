@@ -5,7 +5,7 @@
   "homepage": "https://github.com/infinitelee/buffered-interpolation",
   "main": "index.js",
   "author": "Kevin Lee <kevin@infinite-lee.com>",
-  "license": "MPLv2",
+  "license": "MPL-2.0",
   "bugs": {
     "url": "https://github.com/infinitelee/buffered-interpolation/issues"
   },
