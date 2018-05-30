@@ -1,0 +1,27 @@
+{
+  "name": "buffered-interpolation",
+  "version": "0.0.1",
+  "description": "A class for handling interpolation of networked THREE.js objects.",
+  "homepage": "https://github.com/infinitelee/buffered-interpolation",
+  "main": "index.js",
+  "author": "Kevin Lee <kevin@infinite-lee.com>",
+  "license": "MPLv2",
+  "bugs": {
+    "url": "https://github.com/infinitelee/buffered-interpolation/issues"
+  },
+  "repository": "infinitelee/buffered-interpolation",
+  "dependencies": {
+    "three": "^0.92.0"
+  },
+  "keywords": [
+    "interpolation",
+    "lerping",
+    "hermite",
+    "aframe",
+    "multiplayer",
+    "networked",
+    "networking",
+    "three",
+    "three.js"
+  ]
+}
