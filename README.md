@@ -13,16 +13,16 @@ For rotation (quaternions), uses spherical interpolation.
 ## Usage
 
 ```
-require('buffered-interpolation')
-let bufferedInterpolation = new InterpolationBuffer();
+var InterpolationBuffer = require('buffered-interpolation');
+let interpolationBuffer = new InterpolationBuffer();
 ```
 
 on receipt of networked data:
 ```
-bufferedInterpolation.setPosition(new THREE.Vector3(data.x, data.y, data.z));
+interpolationBuffer.setPosition(new THREE.Vector3(data.x, data.y, data.z));
 ```
 
 in some update/tick method: 
 ```
-object3d.position.copy(bufferedInterpolation.getPosition());
+object3d.position.copy(interpolationBuffer.getPosition());
 ```
