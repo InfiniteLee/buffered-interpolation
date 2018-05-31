@@ -7,20 +7,18 @@ const MODE_HERMITE = 1;
 class InterpolationBuffer {
   constructor(mode = MODE_LERP, bufferTime = 0.15) {
     this.initialized = false;
-    this.set = false;
     this.state = BUFFERING;
     this.buffer = [];
-    this.bufferTime = bufferTime;
+    this.bufferTime = bufferTime * 1000;
     this.time = 0;
-    this.mark = 0;
-    this.lastTime = 0.0;
-
     this.mode = mode;
 
-    this.lastPosition = new THREE.Vector3();
-    this.lastVelocity = new THREE.Vector3();
-    this.lastQuaternion = new THREE.Quaternion();
-    this.lastScale = new THREE.Vector3(1, 1, 1);
+    this.lastBufferFrame = {
+      position: new THREE.Vector3(),
+      velocity: new THREE.Vector3(),
+      quaternion: new THREE.Quaternion(),
+      scale: new THREE.Vector3(1, 1, 1)
+    };
 
     this.position = new THREE.Vector3();
     this.quaternion = new THREE.Quaternion();
@@ -73,37 +71,26 @@ class InterpolationBuffer {
       if (position) {
         position = position.clone();
       } else {
-        position =
-          this.buffer.length > 0
-            ? this.buffer[tail].position.clone()
-            : this.lastPosition.clone();
+        position = this.buffer.length > 0 ? this.buffer[tail].position.clone() : this.lastBufferFrame.position.clone();
       }
 
       if (velocity) {
         velocity = velocity.clone();
       } else {
-        velocity =
-          this.buffer.length > 0
-            ? this.buffer[tail].velocity.clone()
-            : this.lastVelocity.clone();
+        velocity = this.buffer.length > 0 ? this.buffer[tail].velocity.clone() : this.lastBufferFrame.velocity.clone();
       }
 
       if (quaternion) {
         quaternion = quaternion.clone();
       } else {
         quaternion =
-          this.buffer.length > 0
-            ? this.buffer[tail].quaternion.clone()
-            : this.lastQuaternion.clone();
+          this.buffer.length > 0 ? this.buffer[tail].quaternion.clone() : this.lastBufferFrame.quaternion.clone();
       }
 
       if (scale) {
         scale = scale.clone();
       } else {
-        scale =
-          this.buffer.length > 0
-            ? this.buffer[tail].scale.clone()
-            : this.lastScale.clone();
+        scale = this.buffer.length > 0 ? this.buffer[tail].scale.clone() : this.lastBufferFrame.scale.clone();
       }
 
       this.buffer.push({
@@ -114,10 +101,6 @@ class InterpolationBuffer {
         time: this.time
       });
     }
-  }
-
-  isSet() {
-    return this.set;
   }
 
   setTarget(position, velocity, quaternion, scale) {
@@ -139,74 +122,57 @@ class InterpolationBuffer {
   update(delta) {
     if (this.state === BUFFERING) {
       if (this.buffer.length > 0 && !this.initialized) {
-        this.lastPosition.copy(this.buffer[0].position);
-        this.lastVelocity.copy(this.buffer[0].velocity);
-        this.lastQuaternion.copy(this.buffer[0].quaternion);
-        this.lastScale.copy(this.buffer[0].scale);
-        this.lastTime = this.buffer[0].time;
+        this.lastBufferFrame = this.buffer.shift();
         this.initialized = true;
-        this.buffer.shift();
 
-        this.position.copy(this.lastPosition);
-        this.quaternion.copy(this.lastQuaternion);
-        this.scale.copy(this.lastScale);
+        this.position.copy(this.lastBufferFrame.position);
+        this.quaternion.copy(this.lastBufferFrame.quaternion);
+        this.scale.copy(this.lastBufferFrame.scale);
       }
 
       if (this.buffer.length > 0 && this.initialized && this.time > this.bufferTime) {
-        this.mark = this.time - this.bufferTime * 1000;
         this.state = PLAYING;
       }
-    } else if (this.state == PLAYING) {
-      //Purge this.buffer of expired frames
-      while (this.buffer.length > 0 && this.mark > this.buffer[0].time) {
-        this.lastPosition.copy(this.buffer[0].position);
-        this.lastVelocity.copy(this.buffer[0].velocity);
-        this.lastQuaternion.copy(this.buffer[0].quaternion);
-        this.lastScale.copy(this.buffer[0].scale);
-        this.lastTime = this.buffer[0].time;
+    }
 
+    if (this.state == PLAYING) {
+      const mark = this.time - this.bufferTime;
+      //Purge this.buffer of expired frames
+      while (this.buffer.length > 0 && mark > this.buffer[0].time) {
         //if this is the last frame in the buffer, just update the time and reuse it
         if (this.buffer.length > 1) {
-          this.buffer.shift();
+          this.lastBufferFrame = this.buffer.shift();
         } else {
+          this.lastBufferFrame.position.copy(this.buffer[0].position);
+          this.lastBufferFrame.velocity.copy(this.buffer[0].velocity);
+          this.lastBufferFrame.quaternion.copy(this.buffer[0].quaternion);
+          this.lastBufferFrame.scale.copy(this.buffer[0].scale);
+          this.lastBufferFrame.time = this.buffer[0].time;
           this.buffer[0].time = this.time + delta;
         }
       }
       if (this.buffer.length > 0 && this.buffer[0].time > 0) {
-        const delta_time = this.buffer[0].time - this.lastTime;
-        const alpha = (this.mark - this.lastTime) / delta_time;
+        const currentBufferFrame = this.buffer[0];
+        const delta_time = currentBufferFrame.time - this.lastBufferFrame.time;
+        const alpha = (mark - this.lastBufferFrame.time) / delta_time;
 
         if (this.mode === MODE_LERP) {
-          this.lerp(
-            this.position,
-            this.lastPosition,
-            this.buffer[0].position,
-            alpha
-          );
+          this.lerp(this.position, this.lastBufferFrame.position, currentBufferFrame.position, alpha);
         } else if (this.mode === MODE_HERMITE) {
           this.hermite(
             this.position,
             alpha,
-            this.lastPosition,
-            this.buffer[0].position,
-            this.lastVelocity.multiplyScalar(delta_time),
-            this.buffer[0].velocity.multiplyScalar(delta_time)
+            this.lastBufferFrame.position,
+            currentBufferFrame.position,
+            this.lastBufferFrame.velocity.multiplyScalar(delta_time),
+            currentBufferFrame.velocity.multiplyScalar(delta_time)
           );
         }
 
-        this.slerp(
-          this.quaternion,
-          this.lastQuaternion,
-          this.buffer[0].quaternion,
-          alpha
-        );
+        this.slerp(this.quaternion, this.lastBufferFrame.quaternion, currentBufferFrame.quaternion, alpha);
 
-        this.lerp(this.scale, this.lastScale, this.buffer[0].scale, alpha);
-
-        this.set = true;
+        this.lerp(this.scale, this.lastBufferFrame.scale, currentBufferFrame.scale, alpha);
       }
-
-      this.mark += delta;
     }
 
     if (this.initialized) {
