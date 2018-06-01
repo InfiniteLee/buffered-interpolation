@@ -1,6 +1,6 @@
 {
   "name": "buffered-interpolation",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A class for handling interpolation of networked THREE.js objects.",
   "homepage": "https://github.com/infinitelee/buffered-interpolation",
   "main": "dist/buffered-interpolation.js",
