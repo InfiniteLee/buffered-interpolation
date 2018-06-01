@@ -13,8 +13,6 @@
     "dist": "parcel build index.js --out-file buffered-interpolation.js --no-minify --no-source-maps && parcel build index.js --out-file buffered-interpolation.min.js --no-source-maps"
   },
   "devDependencies": {
-    "babel-loader": "^7.1.4",
-    "babel-preset-env": "^1.7.0",
     "parcel-bundler": "^1.8.1"
   },
   "repository": "infinitelee/buffered-interpolation",
