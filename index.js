@@ -68,36 +68,12 @@ class InterpolationBuffer {
         this.buffer[tail].scale.copy(scale);
       }
     } else {
-      if (position) {
-        position = position.clone();
-      } else {
-        position = this.buffer.length > 0 ? this.buffer[tail].position.clone() : this.lastBufferFrame.position.clone();
-      }
-
-      if (velocity) {
-        velocity = velocity.clone();
-      } else {
-        velocity = this.buffer.length > 0 ? this.buffer[tail].velocity.clone() : this.lastBufferFrame.velocity.clone();
-      }
-
-      if (quaternion) {
-        quaternion = quaternion.clone();
-      } else {
-        quaternion =
-          this.buffer.length > 0 ? this.buffer[tail].quaternion.clone() : this.lastBufferFrame.quaternion.clone();
-      }
-
-      if (scale) {
-        scale = scale.clone();
-      } else {
-        scale = this.buffer.length > 0 ? this.buffer[tail].scale.clone() : this.lastBufferFrame.scale.clone();
-      }
-
+      const priorFrame = this.buffer.length > 0 ? this.buffer[tail] : this.lastBufferFrame;
       this.buffer.push({
-        position: position,
-        velocity: velocity,
-        quaternion: quaternion,
-        scale: scale,
+        position: position ? position.clone() : priorFrame.position.clone(),
+        velocity: velocity ? velocity.clone() : priorFrame.velocity.clone(),
+        quaternion: quaternion ? quaternion.clone() : priorFrame.quaternion.clone(),
+        scale: scale ? scale.clone() : priorFrame.scale.clone(),
         time: this.time
       });
     }
