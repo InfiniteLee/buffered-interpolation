@@ -48,27 +48,26 @@ class InterpolationBuffer {
   }
 
   appendBuffer(position, velocity, quaternion, scale) {
-    const tail = this.buffer.length - 1;
-
+    const tail = this.buffer.length > 0 ? this.buffer[this.buffer.length - 1] : null;
     // update the last entry in the buffer if this is the same frame
-    if (this.buffer.length > 0 && this.buffer[tail].time === this.time) {
+    if (tail && tail.time === this.time) {
       if (position) {
-        this.buffer[tail].position.copy(position);
+        tail.position.copy(position);
       }
 
       if (velocity) {
-        this.buffer[tail].velocity.copy(velocity);
+        tail.velocity.copy(velocity);
       }
 
       if (quaternion) {
-        this.buffer[tail].quaternion.copy(quaternion);
+        tail.quaternion.copy(quaternion);
       }
 
       if (scale) {
-        this.buffer[tail].scale.copy(scale);
+        tail.scale.copy(scale);
       }
     } else {
-      const priorFrame = this.buffer.length > 0 ? this.buffer[tail] : this.lastBufferFrame;
+      const priorFrame = tail || this.lastBufferFrame;
       this.buffer.push({
         position: position ? position.clone() : priorFrame.position.clone(),
         velocity: velocity ? velocity.clone() : priorFrame.velocity.clone(),
