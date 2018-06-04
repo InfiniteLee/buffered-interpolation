@@ -50,7 +50,7 @@ class InterpolationBuffer {
   appendBuffer(position, velocity, quaternion, scale) {
     const tail = this.buffer.length - 1;
 
-    //update the last entry in the buffer if this is the same frame
+    // update the last entry in the buffer if this is the same frame
     if (this.buffer.length > 0 && this.buffer[tail].time === this.time) {
       if (position) {
         this.buffer[tail].position.copy(position);
@@ -111,7 +111,7 @@ class InterpolationBuffer {
       }
     }
 
-    if (this.state == PLAYING) {
+    if (this.state === PLAYING) {
       const mark = this.time - this.bufferTime;
       //Purge this.buffer of expired frames
       while (this.buffer.length > 0 && mark > this.buffer[0].time) {
