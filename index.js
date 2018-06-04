@@ -1,13 +1,13 @@
-const BUFFERING = 0;
-const PLAYING = 1;
+const INITIALIZING = 0;
+const BUFFERING = 1;
+const PLAYING = 2;
 
 const MODE_LERP = 0;
 const MODE_HERMITE = 1;
 
 class InterpolationBuffer {
   constructor(mode = MODE_LERP, bufferTime = 0.15) {
-    this.initialized = false;
-    this.state = BUFFERING;
+    this.state = INITIALIZING;
     this.buffer = [];
     this.bufferTime = bufferTime * 1000;
     this.time = 0;
@@ -95,17 +95,18 @@ class InterpolationBuffer {
   }
 
   update(delta) {
-    if (this.state === BUFFERING) {
-      if (this.buffer.length > 0 && !this.initialized) {
+    if (this.state === INITIALIZING) {
+      if (this.buffer.length > 0) {
         this.lastBufferFrame = this.buffer.shift();
-        this.initialized = true;
-
         this.position.copy(this.lastBufferFrame.position);
         this.quaternion.copy(this.lastBufferFrame.quaternion);
         this.scale.copy(this.lastBufferFrame.scale);
+        this.state = BUFFERING;
       }
+    }
 
-      if (this.buffer.length > 0 && this.initialized && this.time > this.bufferTime) {
+    if (this.state === BUFFERING) {
+      if (this.buffer.length > 0 && this.time > this.bufferTime) {
         this.state = PLAYING;
       }
     }
@@ -150,7 +151,7 @@ class InterpolationBuffer {
       }
     }
 
-    if (this.initialized) {
+    if (this.state !== INITIALIZING) {
       this.time += delta;
     }
   }
