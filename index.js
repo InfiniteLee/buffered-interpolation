@@ -1,19 +1,19 @@
-const BUFFERING = 0;
-const PLAYING = 1;
+const INITIALIZING = 0;
+const BUFFERING = 1;
+const PLAYING = 2;
 
 const MODE_LERP = 0;
 const MODE_HERMITE = 1;
 
 class InterpolationBuffer {
   constructor(mode = MODE_LERP, bufferTime = 0.15) {
-    this.initialized = false;
-    this.state = BUFFERING;
+    this.state = INITIALIZING;
     this.buffer = [];
     this.bufferTime = bufferTime * 1000;
     this.time = 0;
     this.mode = mode;
 
-    this.lastBufferFrame = {
+    this.originFrame = {
       position: new THREE.Vector3(),
       velocity: new THREE.Vector3(),
       quaternion: new THREE.Quaternion(),
@@ -48,56 +48,31 @@ class InterpolationBuffer {
   }
 
   appendBuffer(position, velocity, quaternion, scale) {
-    const tail = this.buffer.length - 1;
-
-    //update the last entry in the buffer if this is the same frame
-    if (this.buffer.length > 0 && this.buffer[tail].time === this.time) {
+    const tail = this.buffer.length > 0 ? this.buffer[this.buffer.length - 1] : null;
+    // update the last entry in the buffer if this is the same frame
+    if (tail && tail.time === this.time) {
       if (position) {
-        this.buffer[tail].position.copy(position);
+        tail.position.copy(position);
       }
 
       if (velocity) {
-        this.buffer[tail].velocity.copy(velocity);
+        tail.velocity.copy(velocity);
       }
 
       if (quaternion) {
-        this.buffer[tail].quaternion.copy(quaternion);
+        tail.quaternion.copy(quaternion);
       }
 
       if (scale) {
-        this.buffer[tail].scale.copy(scale);
+        tail.scale.copy(scale);
       }
     } else {
-      if (position) {
-        position = position.clone();
-      } else {
-        position = this.buffer.length > 0 ? this.buffer[tail].position.clone() : this.lastBufferFrame.position.clone();
-      }
-
-      if (velocity) {
-        velocity = velocity.clone();
-      } else {
-        velocity = this.buffer.length > 0 ? this.buffer[tail].velocity.clone() : this.lastBufferFrame.velocity.clone();
-      }
-
-      if (quaternion) {
-        quaternion = quaternion.clone();
-      } else {
-        quaternion =
-          this.buffer.length > 0 ? this.buffer[tail].quaternion.clone() : this.lastBufferFrame.quaternion.clone();
-      }
-
-      if (scale) {
-        scale = scale.clone();
-      } else {
-        scale = this.buffer.length > 0 ? this.buffer[tail].scale.clone() : this.lastBufferFrame.scale.clone();
-      }
-
+      const priorFrame = tail || this.originFrame;
       this.buffer.push({
-        position: position,
-        velocity: velocity,
-        quaternion: quaternion,
-        scale: scale,
+        position: position ? position.clone() : priorFrame.position.clone(),
+        velocity: velocity ? velocity.clone() : priorFrame.velocity.clone(),
+        quaternion: quaternion ? quaternion.clone() : priorFrame.quaternion.clone(),
+        scale: scale ? scale.clone() : priorFrame.scale.clone(),
         time: this.time
       });
     }
@@ -120,62 +95,63 @@ class InterpolationBuffer {
   }
 
   update(delta) {
-    if (this.state === BUFFERING) {
-      if (this.buffer.length > 0 && !this.initialized) {
-        this.lastBufferFrame = this.buffer.shift();
-        this.initialized = true;
-
-        this.position.copy(this.lastBufferFrame.position);
-        this.quaternion.copy(this.lastBufferFrame.quaternion);
-        this.scale.copy(this.lastBufferFrame.scale);
+    if (this.state === INITIALIZING) {
+      if (this.buffer.length > 0) {
+        this.originFrame = this.buffer.shift();
+        this.position.copy(this.originFrame.position);
+        this.quaternion.copy(this.originFrame.quaternion);
+        this.scale.copy(this.originFrame.scale);
+        this.state = BUFFERING;
       }
+    }
 
-      if (this.buffer.length > 0 && this.initialized && this.time > this.bufferTime) {
+    if (this.state === BUFFERING) {
+      if (this.buffer.length > 0 && this.time > this.bufferTime) {
         this.state = PLAYING;
       }
     }
 
-    if (this.state == PLAYING) {
+    if (this.state === PLAYING) {
       const mark = this.time - this.bufferTime;
       //Purge this.buffer of expired frames
       while (this.buffer.length > 0 && mark > this.buffer[0].time) {
         //if this is the last frame in the buffer, just update the time and reuse it
         if (this.buffer.length > 1) {
-          this.lastBufferFrame = this.buffer.shift();
+          this.originFrame = this.buffer.shift();
         } else {
-          this.lastBufferFrame.position.copy(this.buffer[0].position);
-          this.lastBufferFrame.velocity.copy(this.buffer[0].velocity);
-          this.lastBufferFrame.quaternion.copy(this.buffer[0].quaternion);
-          this.lastBufferFrame.scale.copy(this.buffer[0].scale);
-          this.lastBufferFrame.time = this.buffer[0].time;
+          this.originFrame.position.copy(this.buffer[0].position);
+          this.originFrame.velocity.copy(this.buffer[0].velocity);
+          this.originFrame.quaternion.copy(this.buffer[0].quaternion);
+          this.originFrame.scale.copy(this.buffer[0].scale);
+          this.originFrame.time = this.buffer[0].time;
           this.buffer[0].time = this.time + delta;
         }
       }
       if (this.buffer.length > 0 && this.buffer[0].time > 0) {
-        const currentBufferFrame = this.buffer[0];
-        const delta_time = currentBufferFrame.time - this.lastBufferFrame.time;
-        const alpha = (mark - this.lastBufferFrame.time) / delta_time;
+        const targetFrame = this.buffer[0];
+        const delta_time = targetFrame.time - this.originFrame.time;
+        const alpha = (mark - this.originFrame.time) / delta_time;
 
         if (this.mode === MODE_LERP) {
-          this.lerp(this.position, this.lastBufferFrame.position, currentBufferFrame.position, alpha);
+          this.lerp(this.position, this.originFrame.position, targetFrame.position, alpha);
         } else if (this.mode === MODE_HERMITE) {
           this.hermite(
             this.position,
             alpha,
-            this.lastBufferFrame.position,
-            currentBufferFrame.position,
-            this.lastBufferFrame.velocity.multiplyScalar(delta_time),
-            currentBufferFrame.velocity.multiplyScalar(delta_time)
+            this.originFrame.position,
+            targetFrame.position,
+            this.originFrame.velocity.multiplyScalar(delta_time),
+            targetFrame.velocity.multiplyScalar(delta_time)
           );
         }
 
-        this.slerp(this.quaternion, this.lastBufferFrame.quaternion, currentBufferFrame.quaternion, alpha);
+        this.slerp(this.quaternion, this.originFrame.quaternion, targetFrame.quaternion, alpha);
 
-        this.lerp(this.scale, this.lastBufferFrame.scale, currentBufferFrame.scale, alpha);
+        this.lerp(this.scale, this.originFrame.scale, targetFrame.scale, alpha);
       }
     }
 
-    if (this.initialized) {
+    if (this.state !== INITIALIZING) {
       this.time += delta;
     }
   }
