@@ -167,6 +167,4 @@ InterpolationBuffer.prototype.getScale = function() {
   return this.scale;
 };
 
-if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
-  module.exports = InterpolationBuffer;
-}
+module.exports = InterpolationBuffer;
