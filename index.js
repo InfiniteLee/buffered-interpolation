@@ -1,3 +1,5 @@
+/* global THREE */
+
 var INITIALIZING = 0;
 var BUFFERING = 1;
 var PLAYING = 2;
