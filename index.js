@@ -6,17 +6,17 @@ var MODE_LERP = 0;
 var MODE_HERMITE = 1;
 
 function hermite(target, t, p1, p2, v1, v2) {
-    var t2 = t * t;
-    var t3 = t * t * t;
-    var a = 2 * t3 - 3 * t2 + 1;
-    var b = -2 * t3 + 3 * t2;
-    var c = t3 - 2 * t2 + t;
-    var d = t3 - t2;
+  var t2 = t * t;
+  var t3 = t * t * t;
+  var a = 2 * t3 - 3 * t2 + 1;
+  var b = -2 * t3 + 3 * t2;
+  var c = t3 - 2 * t2 + t;
+  var d = t3 - t2;
 
-    target.copy(p1.multiplyScalar(a));
-    target.add(p2.multiplyScalar(b));
-    target.add(v1.multiplyScalar(c));
-    target.add(v2.multiplyScalar(d));
+  target.copy(p1.multiplyScalar(a));
+  target.add(p2.multiplyScalar(b));
+  target.add(v1.multiplyScalar(c));
+  target.add(v2.multiplyScalar(d));
 }
 
 function lerp(target, v1, v2, alpha) {
@@ -28,23 +28,23 @@ function slerp(target, r1, r2, alpha) {
 }
 
 function InterpolationBuffer(mode, bufferTime) {
-    this.state = INITIALIZING;
-    this.buffer = [];
-    this.time = 0;
-    this.mode = mode != null ? mode : MODE_LERP;
-    this.bufferTime = bufferTime != null ? bufferTime * 1000 : 1.5;
+  this.state = INITIALIZING;
+  this.buffer = [];
+  this.time = 0;
+  this.mode = mode != null ? mode : MODE_LERP;
+  this.bufferTime = bufferTime != null ? bufferTime * 1000 : 1.5;
 
-    this.originFrame = {
-      position: new THREE.Vector3(),
-      velocity: new THREE.Vector3(),
-      quaternion: new THREE.Quaternion(),
-      scale: new THREE.Vector3(1, 1, 1)
-    };
+  this.originFrame = {
+    position: new THREE.Vector3(),
+    velocity: new THREE.Vector3(),
+    quaternion: new THREE.Quaternion(),
+    scale: new THREE.Vector3(1, 1, 1)
+  };
 
-    this.position = new THREE.Vector3();
-    this.quaternion = new THREE.Quaternion();
-    this.scale = new THREE.Vector3(1, 1, 1);
-  }
+  this.position = new THREE.Vector3();
+  this.quaternion = new THREE.Quaternion();
+  this.scale = new THREE.Vector3(1, 1, 1);
+}
 
 InterpolationBuffer.prototype.appendBuffer = function(position, velocity, quaternion, scale) {
   var tail = this.buffer.length > 0 ? this.buffer[this.buffer.length - 1] : null;
@@ -72,7 +72,7 @@ InterpolationBuffer.prototype.appendBuffer = function(position, velocity, quater
       velocity: velocity ? velocity.clone() : priorFrame.velocity.clone(),
       quaternion: quaternion ? quaternion.clone() : priorFrame.quaternion.clone(),
       scale: scale ? scale.clone() : priorFrame.scale.clone(),
-      time: this.time,
+      time: this.time
     });
   }
 };
