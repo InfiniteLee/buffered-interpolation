@@ -10,10 +10,12 @@
     "url": "https://github.com/infinitelee/buffered-interpolation/issues"
   },
   "scripts": {
-    "dist": "parcel build index.js --out-file buffered-interpolation.js --no-minify --no-source-maps && parcel build index.js --out-file buffered-interpolation.min.js --no-source-maps"
+    "dist": "babel index.js -o dist/buffered-interpolation.js --presets=env && babel index.js -o dist/buffered-interpolation.min.js --presets=minify"
   },
   "devDependencies": {
-    "parcel-bundler": "^1.8.1"
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-minify": "^0.4.3"
   },
   "repository": "infinitelee/buffered-interpolation",
   "keywords": [
