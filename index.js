@@ -1,3 +1,5 @@
+/* global THREE */
+
 const INITIALIZING = 0;
 const BUFFERING = 1;
 const PLAYING = 2;
@@ -169,6 +171,4 @@ class InterpolationBuffer {
   }
 }
 
-if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
-  module.exports = InterpolationBuffer;
-}
+module.exports = InterpolationBuffer;

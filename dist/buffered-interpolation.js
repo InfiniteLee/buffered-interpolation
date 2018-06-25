@@ -4,6 +4,8 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+/* global THREE */
+
 var INITIALIZING = 0;
 var BUFFERING = 1;
 var PLAYING = 2;
@@ -189,6 +191,4 @@ var InterpolationBuffer = function () {
   return InterpolationBuffer;
 }();
 
-if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
-  module.exports = InterpolationBuffer;
-}
+module.exports = InterpolationBuffer;
