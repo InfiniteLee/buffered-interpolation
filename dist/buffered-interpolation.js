@@ -13,6 +13,51 @@ var PLAYING = 2;
 var MODE_LERP = 0;
 var MODE_HERMITE = 1;
 
+var vectorPool = [];
+var quatPool = [];
+var framePool = [];
+
+var getPooledVector = function getPooledVector() {
+  return vectorPool.shift() || new THREE.Vector3();
+};
+var getPooledQuaternion = function getPooledQuaternion() {
+  return quatPool.shift() || new THREE.Quaternion();
+};
+
+var getPooledFrame = function getPooledFrame() {
+  var frame = framePool.shift() || { position: null, velocity: null, scale: null, quaternion: null, time: 0 };
+
+  frame.position = getPooledVector();
+  frame.velocity = getPooledVector();
+  frame.quaternion = getPooledQuaternion();
+  frame.scale = getPooledVector();
+
+  return frame;
+};
+
+var freeQuaternion = function freeQuaternion(q) {
+  return quatPool.push(q);
+};
+var freeVector = function freeVector(v) {
+  return vectorPool.push(v);
+};
+
+var freeFrame = function freeFrame(f) {
+  freeVector(f.position);
+  f.position = null;
+
+  freeVector(f.velocity);
+  f.velocity = null;
+
+  freeQuaternion(f.quaternion);
+  f.quaternion = null;
+
+  freeVector(f.scale);
+  f.scale = null;
+
+  framePool.push(f);
+};
+
 var InterpolationBuffer = function () {
   function InterpolationBuffer() {
     var mode = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : MODE_LERP;
@@ -26,13 +71,7 @@ var InterpolationBuffer = function () {
     this.time = 0;
     this.mode = mode;
 
-    this.originFrame = {
-      position: new THREE.Vector3(),
-      velocity: new THREE.Vector3(),
-      quaternion: new THREE.Quaternion(),
-      scale: new THREE.Vector3(1, 1, 1)
-    };
-
+    this.originFrame = getPooledFrame();
     this.position = new THREE.Vector3();
     this.quaternion = new THREE.Quaternion();
     this.scale = new THREE.Vector3(1, 1, 1);
@@ -64,6 +103,12 @@ var InterpolationBuffer = function () {
       THREE.Quaternion.slerp(r1, r2, target, alpha);
     }
   }, {
+    key: "updateOriginFrameToBufferTail",
+    value: function updateOriginFrameToBufferTail() {
+      freeFrame(this.originFrame);
+      this.originFrame = this.buffer.shift();
+    }
+  }, {
     key: "appendBuffer",
     value: function appendBuffer(position, velocity, quaternion, scale) {
       var tail = this.buffer.length > 0 ? this.buffer[this.buffer.length - 1] : null;
@@ -86,13 +131,14 @@ var InterpolationBuffer = function () {
         }
       } else {
         var priorFrame = tail || this.originFrame;
-        this.buffer.push({
-          position: position ? position.clone() : priorFrame.position.clone(),
-          velocity: velocity ? velocity.clone() : priorFrame.velocity.clone(),
-          quaternion: quaternion ? quaternion.clone() : priorFrame.quaternion.clone(),
-          scale: scale ? scale.clone() : priorFrame.scale.clone(),
-          time: this.time
-        });
+        var newFrame = getPooledFrame();
+        newFrame.position.copy(position || priorFrame.position);
+        newFrame.velocity.copy(velocity || priorFrame.velocity);
+        newFrame.quaternion.copy(quaternion || priorFrame.quaternion);
+        newFrame.scale.copy(scale || priorFrame.scale);
+        newFrame.time = this.time;
+
+        this.buffer.push(newFrame);
       }
     }
   }, {
@@ -120,7 +166,7 @@ var InterpolationBuffer = function () {
     value: function update(delta) {
       if (this.state === INITIALIZING) {
         if (this.buffer.length > 0) {
-          this.originFrame = this.buffer.shift();
+          this.updateOriginFrameToBufferTail();
           this.position.copy(this.originFrame.position);
           this.quaternion.copy(this.originFrame.quaternion);
           this.scale.copy(this.originFrame.scale);
@@ -140,7 +186,7 @@ var InterpolationBuffer = function () {
         while (this.buffer.length > 0 && mark > this.buffer[0].time) {
           //if this is the last frame in the buffer, just update the time and reuse it
           if (this.buffer.length > 1) {
-            this.originFrame = this.buffer.shift();
+            this.updateOriginFrameToBufferTail();
           } else {
             this.originFrame.position.copy(this.buffer[0].position);
             this.originFrame.velocity.copy(this.buffer[0].velocity);

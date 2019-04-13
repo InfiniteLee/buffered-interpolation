@@ -7,6 +7,43 @@ const PLAYING = 2;
 const MODE_LERP = 0;
 const MODE_HERMITE = 1;
 
+const vectorPool = [];
+const quatPool = [];
+const framePool = [];
+
+const getPooledVector = () => vectorPool.shift() || new THREE.Vector3();
+const getPooledQuaternion = () => quatPool.shift() || new THREE.Quaternion();
+
+const getPooledFrame = () => {
+  let frame = framePool.shift() || { position: null, velocity: null, scale: null, quaternion: null, time: 0 };
+
+  frame.position = getPooledVector();
+  frame.velocity = getPooledVector();
+  frame.quaternion = getPooledQuaternion();
+  frame.scale = getPooledVector();
+
+  return frame;
+};
+
+const freeQuaternion = q => quatPool.push(q);
+const freeVector = v => vectorPool.push(v);
+
+const freeFrame = f => {
+  freeVector(f.position);
+  f.position = null;
+
+  freeVector(f.velocity);
+  f.velocity = null;
+
+  freeQuaternion(f.quaternion);
+  f.quaternion = null;
+
+  freeVector(f.scale);
+  f.scale = null;
+
+  framePool.push(f);
+};
+
 class InterpolationBuffer {
   constructor(mode = MODE_LERP, bufferTime = 0.15) {
     this.state = INITIALIZING;
@@ -15,13 +52,7 @@ class InterpolationBuffer {
     this.time = 0;
     this.mode = mode;
 
-    this.originFrame = {
-      position: new THREE.Vector3(),
-      velocity: new THREE.Vector3(),
-      quaternion: new THREE.Quaternion(),
-      scale: new THREE.Vector3(1, 1, 1)
-    };
-
+    this.originFrame = getPooledFrame();
     this.position = new THREE.Vector3();
     this.quaternion = new THREE.Quaternion();
     this.scale = new THREE.Vector3(1, 1, 1);
@@ -49,6 +80,11 @@ class InterpolationBuffer {
     THREE.Quaternion.slerp(r1, r2, target, alpha);
   }
 
+  updateOriginFrameToBufferTail() {
+    freeFrame(this.originFrame);
+    this.originFrame = this.buffer.shift();
+  }
+
   appendBuffer(position, velocity, quaternion, scale) {
     const tail = this.buffer.length > 0 ? this.buffer[this.buffer.length - 1] : null;
     // update the last entry in the buffer if this is the same frame
@@ -70,13 +106,14 @@ class InterpolationBuffer {
       }
     } else {
       const priorFrame = tail || this.originFrame;
-      this.buffer.push({
-        position: position ? position.clone() : priorFrame.position.clone(),
-        velocity: velocity ? velocity.clone() : priorFrame.velocity.clone(),
-        quaternion: quaternion ? quaternion.clone() : priorFrame.quaternion.clone(),
-        scale: scale ? scale.clone() : priorFrame.scale.clone(),
-        time: this.time
-      });
+      const newFrame = getPooledFrame();
+      newFrame.position.copy(position || priorFrame.position);
+      newFrame.velocity.copy(velocity ||  priorFrame.velocity);
+      newFrame.quaternion.copy(quaternion || priorFrame.quaternion);
+      newFrame.scale.copy(scale || priorFrame.scale);
+      newFrame.time = this.time;
+
+      this.buffer.push(newFrame);
     }
   }
 
@@ -99,7 +136,7 @@ class InterpolationBuffer {
   update(delta) {
     if (this.state === INITIALIZING) {
       if (this.buffer.length > 0) {
-        this.originFrame = this.buffer.shift();
+        this.updateOriginFrameToBufferTail();
         this.position.copy(this.originFrame.position);
         this.quaternion.copy(this.originFrame.quaternion);
         this.scale.copy(this.originFrame.scale);
@@ -119,7 +156,7 @@ class InterpolationBuffer {
       while (this.buffer.length > 0 && mark > this.buffer[0].time) {
         //if this is the last frame in the buffer, just update the time and reuse it
         if (this.buffer.length > 1) {
-          this.originFrame = this.buffer.shift();
+          this.updateOriginFrameToBufferTail();
         } else {
           this.originFrame.position.copy(this.buffer[0].position);
           this.originFrame.velocity.copy(this.buffer[0].velocity);
