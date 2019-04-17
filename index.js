@@ -15,34 +15,16 @@ const getPooledVector = () => vectorPool.shift() || new THREE.Vector3();
 const getPooledQuaternion = () => quatPool.shift() || new THREE.Quaternion();
 
 const getPooledFrame = () => {
-  let frame = framePool.shift() || { position: null, velocity: null, scale: null, quaternion: null, time: 0 };
+  let frame = framePool.pop();
 
-  frame.position = getPooledVector();
-  frame.velocity = getPooledVector();
-  frame.quaternion = getPooledQuaternion();
-  frame.scale = getPooledVector();
+  if (!frame) {
+    frame = { position: new THREE.Vector3(), velocity: new THREE.Vector3(), scale: new THREE.Vector3(), quaternion: new THREE.Quaternion(), time: 0 };
+  }
 
   return frame;
 };
 
-const freeQuaternion = q => quatPool.push(q);
-const freeVector = v => vectorPool.push(v);
-
-const freeFrame = f => {
-  freeVector(f.position);
-  f.position = null;
-
-  freeVector(f.velocity);
-  f.velocity = null;
-
-  freeQuaternion(f.quaternion);
-  f.quaternion = null;
-
-  freeVector(f.scale);
-  f.scale = null;
-
-  framePool.push(f);
-};
+const freeFrame = f => framePool.push(f);
 
 class InterpolationBuffer {
   constructor(mode = MODE_LERP, bufferTime = 0.15) {
