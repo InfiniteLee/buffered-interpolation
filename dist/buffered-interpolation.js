@@ -25,37 +25,17 @@ var getPooledQuaternion = function getPooledQuaternion() {
 };
 
 var getPooledFrame = function getPooledFrame() {
-  var frame = framePool.shift() || { position: null, velocity: null, scale: null, quaternion: null, time: 0 };
+  var frame = framePool.pop();
 
-  frame.position = getPooledVector();
-  frame.velocity = getPooledVector();
-  frame.quaternion = getPooledQuaternion();
-  frame.scale = getPooledVector();
+  if (!frame) {
+    frame = { position: new THREE.Vector3(), velocity: new THREE.Vector3(), scale: new THREE.Vector3(), quaternion: new THREE.Quaternion(), time: 0 };
+  }
 
   return frame;
 };
 
-var freeQuaternion = function freeQuaternion(q) {
-  return quatPool.push(q);
-};
-var freeVector = function freeVector(v) {
-  return vectorPool.push(v);
-};
-
 var freeFrame = function freeFrame(f) {
-  freeVector(f.position);
-  f.position = null;
-
-  freeVector(f.velocity);
-  f.velocity = null;
-
-  freeQuaternion(f.quaternion);
-  f.quaternion = null;
-
-  freeVector(f.scale);
-  f.scale = null;
-
-  framePool.push(f);
+  return framePool.push(f);
 };
 
 var InterpolationBuffer = function () {
