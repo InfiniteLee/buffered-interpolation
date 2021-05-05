@@ -59,7 +59,7 @@ class InterpolationBuffer {
   }
 
   slerp(target, r1, r2, alpha) {
-    target.slerpQuaternions(r1,r2,alpha);
+    target.slerpQuaternions(r1, r2, alpha);
   }
 
   updateOriginFrameToBufferTail() {
