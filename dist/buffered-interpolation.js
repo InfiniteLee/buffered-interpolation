@@ -80,7 +80,7 @@ var InterpolationBuffer = function () {
   }, {
     key: "slerp",
     value: function slerp(target, r1, r2, alpha) {
-      THREE.Quaternion.slerp(r1, r2, target, alpha);
+      target.slerpQuaternions(r1, r2, alpha);
     }
   }, {
     key: "updateOriginFrameToBufferTail",
